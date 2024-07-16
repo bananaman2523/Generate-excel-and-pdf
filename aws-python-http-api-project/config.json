@@ -1,0 +1,15 @@
+{
+    "dynamodb_endpoint": "http://localhost:8000",
+    "directory": "./file",
+    "timestamp_format": "%m_%d_%Y_%H:%M:%S",
+    "table_name": "student",
+    "life_insurance" : "life_insurance",
+    "file_name_daily" : "grade_daily_",
+    "file_name_weekly" : "grade_weekly_",
+    "sum_name_daily" : "university_summary_",
+    "sum_name_weekly" : "university_summary_weekly_",
+    "data_frame" : ["id", "name", "lastname", "age", "grade", "university", "field", "enroll_subject", "date_create", "date_update", "score"],
+    "data_frame_summary" : ["university_id", "university_name", "grade", "student_count"],
+    "data_frame_oic" : ["บริษัทประกันชีวิต", "ปีแรก", "ปีต่อไป", "ปีแรก", "ปีต่อไป", "ปีแรก", "ปีต่อไป", "อุบัติเหตุส่วนบุคคล", "ปีแรก", "ปีต่อไป", "ปีแรก", "ปีต่อไป", "ปีแรก", "ปีต่อไป", "อุบัติเหตุส่วนบุคคล","ค่าจ้างหรือค่าบำเหน็จรับทั้งสิ้น ในเดือนนี้","ค่าจ้างหรือค่าบำเหน็จค้างรับ ณ วันสิ้นเดือน","เบี้ยประกันภัยค้างนำส่ง ณ วันสิ้นเดือน"]
+
+}

@@ -1,0 +1,98 @@
+service: aws-python-http-api-project
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.9
+  environment:
+    DYNAMODB_ENDPOINT: http://localhost:8000
+    DYNAMODB_TABLE: 'student'
+
+
+functions:
+  delete_data:
+    handler: handler.delete_data
+    events:
+      - httpApi:
+          path: /{table_name}/delete
+          method: delete
+  list_Data:
+    handler: handler.list_data
+    events:
+      - httpApi:
+          path: /{table_name}/list
+          method: get
+  list_one_Data:
+    handler: handler.list_one_data
+    events:
+      - httpApi:
+          path: /{table_name}/get
+          method: get
+  create_data:
+    handler: handler.create_data
+    events:
+      - httpApi:
+          path: /{table_name}/create
+          method: post
+    timeout : 60
+  update_data:
+    handler: handler.update_data
+    events:
+      - httpApi:
+          path: /{table_name}/update
+          method: patch
+    timeout: 60
+  delete_all_data:
+    handler: handler.delete_all_data
+    events:
+      - httpApi:
+          path: /{table_name}/delete_all
+          method: get
+  report_daily:
+    handler: report.report_daily
+    events:
+      - schedule:
+          rate: cron(59 23 * * *)
+      - httpApi:
+          path: /report
+          method: get
+          environment:
+            TABLE_NAME: ${self:provider.environment.DYNAMODB_TABLE}
+    timeout: 60
+  report_weekly:
+    handler: report.report_weekly
+    events:
+      - schedule:
+          rate: cron(59 23 * * 0)
+      - httpApi:
+          path: /report_weekly
+          method: get
+          environment:
+            TABLE_NAME: ${self:provider.environment.DYNAMODB_TABLE}
+    timeout: 60
+  # quarterly:
+  #   handler: report.quarterly
+  #   events:
+  #     - httpApi:
+  #         path: /quarterly
+  #         method: get
+  #   timeout: 60
+  insert_student:
+    handler: report.insert_student
+    events:
+      - httpApi:
+          path: /insert_student
+          method: get
+    timeout: 15
+  report_excel:
+    handler: report-excel.report_excel
+    events:
+      - httpApi:
+          path: /report_excel
+          method: post
+    timeout: 15
+
+      
+
+plugins:
+  - serverless-offline
