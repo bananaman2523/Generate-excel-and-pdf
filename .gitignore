@@ -1,0 +1,12 @@
+/venv/
+/.idea/
+node_modules
+**/__pycache__/  
+.serverless
+/backend/.idea/
+**/.DS_Store
+.vscode/
+coverage.xml
+.coverage
+.tox
+/~/

@@ -172,6 +172,15 @@ def create_data(event, context):
             "statusCode": 200,
             "body": json.dumps({"item": data, "message": "Item created successfully"})
         }
+    elif table_name == 'customer_report':
+        data = json.loads(event['body'])
+        if 'id' not in data:
+            data['id'] = str(uuid.uuid4())
+        table.put_item(Item=data)
+        return {
+            "statusCode": 200,
+            "body": json.dumps({"item": data, "message": "Item created successfully"})
+        }
     else:
         return {
             "statusCode": 400,
