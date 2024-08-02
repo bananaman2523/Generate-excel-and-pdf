@@ -152,11 +152,12 @@ def report_excel(data):
                 'file_name' : 'RPCL001',
                 'data_per_page' : 20,
                 'filter' : i,
-                'language' : 'th',
+                'language' : 'en',
                 'table' : 'sales_premium_transaction',
                 'user_name' : 'test test',
                 'set_column' : 11,
                 'output_header': [
+                    {'title': 'number', 'variable': 'Number'},
                     {'title': 'customer_name', 'variable': 'Customer Name'},
                     {'title': 'loan_id', 'variable': 'Loan ID'},
                     {'title': 'insurance_company', 'variable': 'Insurance Company'},
@@ -168,7 +169,7 @@ def report_excel(data):
                 ],
                 'header_style' : [
                     {
-                        'column' : ['claim_amount','payout_amount','submission_date','approval_date','customer_name','loan_id','insurance_company','claim_status'], 
+                        'column' : ['number','claim_amount','payout_amount','submission_date','approval_date','customer_name','loan_id','insurance_company','claim_status'], 
                         'style' : {'align': 'center', 'valign': 'top', 'border': 1, 'font_size': 9, 'bold' : 1,'fg_color' :'#E6F7FF','text_wrap' : True}
                     }
                 ],
@@ -176,9 +177,11 @@ def report_excel(data):
                     'style_align_right': {'align': 'right', 'border': 1, 'font_size': 9,'text_wrap' : True, 'valign' : 'top'},
                     'style_border': {'font_size': 9, 'border': 1,'text_wrap' : True, 'valign' : 'top'},
                     'style_number': {'font_size': 9, 'num_format': '#,##0.00', 'border': 1,'text_wrap' : True, 'valign' : 'top'},
-                    'center_header' : {'font_size': 15, 'bold' : 1, 'align' : 'center','text_wrap' : True, 'valign' : 'top'}
+                    'style_index': {'font_size': 10, 'border': 1, 'valign' : 'top', 'align' : 'center'},
+                    'center_header' : {'font_size': 15, 'bold' : 1, 'align' : 'center', 'valign' : 'top'}
                 },
                 'style_format': {
+                    'number': 'style_index',
                     'claim_amount': 'style_number',
                     'payout_amount': 'style_number',
                     'submission_date': 'style_align_right',
@@ -347,12 +350,13 @@ def zip_xlsx(file_name):
 
 def get_customer_report(chunk, language = 'th'):
     data_transaction = []
+    number = 1
     for item in chunk:
         sub_date = item.get("created_date", '')
         approval_date = item.get("export_date", '')
 
         insurance_company = json.loads(item.get("insurer", '{}'))
-        if insurance_company.get('insurer_name', {}).get('M', {}).get(language, {}).get('S', {}) is None:
+        if 'en' not in insurance_company.get('insurer_name', {}).get('M', {}):
             insurance_company_name_th = insurance_company.get('insurer_name', {}).get('M', {}).get('th', {}).get('S', {})
         else:
             insurance_company_name_th = insurance_company.get('insurer_name', {}).get('M', {}).get(language, {}).get('S', {})
@@ -367,6 +371,7 @@ def get_customer_report(chunk, language = 'th'):
         total_fee_rate_str = item.get("total_fee_rate", '0')
         total_fee_rate = float(total_fee_rate_str) if total_fee_rate_str else 0
         input_data = {
+            'number' : number,
             'customer_name': item.get("customer_full_name", ''),
             'loan_id': loan_product_name_th,
             'insurance_company': insurance_company_name_th,
@@ -377,6 +382,7 @@ def get_customer_report(chunk, language = 'th'):
             'payout_amount': total_fee_rate
         }
         data_transaction.append(input_data)
+        number += 1
     return data_transaction
 
 def get_insurance_company_report(chunk):
@@ -509,7 +515,10 @@ def group_export(data, filter, language='th'):
     if filter == 'insurance':
         for item in data:
             insurer_data = json.loads(item['insurer'])
-            insurer_name = insurer_data.get('insurer_name', {}).get('M', {}).get(language, {}).get('S')
+            if 'en' in insurer_data.get('insurer_name', {}).get('M', {}):
+                insurer_name = insurer_data.get('insurer_name', {}).get('M', {}).get('th', {}).get('S')
+            else:
+                insurer_name = insurer_data.get('insurer_name', {}).get('M', {}).get(language, {}).get('S')
             if insurer_name:
                 grouped[insurer_name].append(item)
 
@@ -538,8 +547,6 @@ def split_data(data, chunk_size, group= False):
         return result
 
 def gen_excel(template_input):
-    export_file = []
-
     user_name = template_input['user_name']
     chunk_size = template_input['data_per_page']
 
