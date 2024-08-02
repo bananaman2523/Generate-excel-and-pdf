@@ -3,6 +3,7 @@ import boto3
 import json
 from datetime import datetime
 from collections import defaultdict
+import zipfile
 
 config = {
     "dynamodb_endpoint": "http://localhost:8000",
@@ -23,7 +24,6 @@ def set_paper(sheet_name: str, writer: pd.ExcelWriter, user_name, chunks):
 def export_xlsx(dataframe: pd.DataFrame, writer: pd.ExcelWriter, sheet_name: str, xlsx_index: bool = False):
     if len(dataframe.index) != 0:
         dataframe.to_excel(writer, sheet_name=sheet_name, index=xlsx_index)
-
 
 def add_style(dataframe: pd.DataFrame, styles: dict, writer: pd.ExcelWriter, len_template, custom_header, header_style, header_titles, file, sheet_name: str):
     if styles:
@@ -133,8 +133,8 @@ def add_space(pd_dataframe):
 
 def convert_time(date):
     if date:
-        datetime_str = date
-        datetime_obj = datetime.fromisoformat(datetime_str)
+        # datetime_str = date
+        datetime_obj = datetime.fromisoformat(date)
         formatted_date = datetime_obj.strftime('%Y-%m-%d')
         return formatted_date
 
@@ -338,6 +338,13 @@ def start_function(functions_to_call, pd_dataframe):
 
     return pd_dataframe
 
+def zip_xlsx(file_name):
+    current_dateTime = datetime.now()
+    timestamp = convert_time(str(current_dateTime))
+    zip_name = f'file/export_RPCL_{timestamp}.zip'
+    with zipfile.ZipFile(zip_name, 'a') as zipf:
+        zipf.write(file_name)
+
 def get_customer_report(chunk, language = 'th'):
     data_transaction = []
     for item in chunk:
@@ -531,6 +538,8 @@ def split_data(data, chunk_size, group= False):
         return result
 
 def gen_excel(template_input):
+    export_file = []
+
     user_name = template_input['user_name']
     chunk_size = template_input['data_per_page']
 
@@ -569,6 +578,7 @@ def gen_excel(template_input):
         chunks = split_data(data, chunk_size, group)
     else:
         chunks = split_data(data, chunk_size)
+
     with pd.ExcelWriter(file_name, engine='xlsxwriter') as writer:
         for i, chunk in enumerate(chunks):
             if template_input['table'] == 'sales_premium_transaction':
@@ -591,7 +601,6 @@ def gen_excel(template_input):
             pd_dataframe = start_function(template_input['excel_template'], pd_dataframe)
             sheet_name = f'Sheet_{i+1}'
             export_xlsx(pd_dataframe, writer, sheet_name=sheet_name)
-
             # add style
             len_template = len(template_input['excel_template'])
             custom_header = template_input['excel_template']
@@ -618,8 +627,9 @@ def gen_excel(template_input):
             for col_num, column in enumerate(pd_dataframe.columns):
                 worksheet.set_column(col_num, col_num, template_input['set_column'])
 
-
         writer.close()
+
+    zip_xlsx(file_name)
 
 def main():
     report_excel(data = 'RPCL001')
