@@ -2,8 +2,11 @@ import pandas as pd
 import boto3
 import json
 from datetime import datetime
+from dataclasses import dataclass, field
 from collections import defaultdict
 import zipfile
+import pyzipper
+from typing import List
 
 config = {
     "dynamodb_endpoint": "http://localhost:8000",
@@ -152,12 +155,12 @@ def report_excel(data):
                 'file_name' : 'RPCL001',
                 'data_per_page' : 20,
                 'filter' : i,
-                'language' : 'en',
+                'language' : 'th',
                 'table' : 'sales_premium_transaction',
                 'user_name' : 'test test',
                 'set_column' : 11,
                 'output_header': [
-                    {'title': 'number', 'variable': 'Number'},
+                    {'title': 'number', 'variable': ' '},
                     {'title': 'customer_name', 'variable': 'Customer Name'},
                     {'title': 'loan_id', 'variable': 'Loan ID'},
                     {'title': 'insurance_company', 'variable': 'Insurance Company'},
@@ -209,6 +212,7 @@ def report_excel(data):
             'select_date' : 'ข้อมูลระหว่างวันที่ 01/07/2567 - 20/07/2567',
             'set_column' : 9,
             'output_header': [
+                {'title': 'number', 'variable': ' '},
                 {'title': 'insurance_company', 'variable': 'Insurance Company'},
                 {'title': 'number_of_claims', 'variable': 'Number of Claims'},
                 {'title': 'amount_of_claim', 'variable': 'Amount of Claim'},
@@ -227,7 +231,7 @@ def report_excel(data):
             ],
             'header_style' : [
                 {
-                    'column' : ['insurance_company','number_of_claims','amount_of_claim'], 
+                    'column' : ['number','insurance_company','number_of_claims','amount_of_claim'], 
                     'style' : {'align': 'center', 'valign': 'top', 'border': 1, 'font_size': 9, 'bold' : 1, 'text_wrap' : True}
                 },
                 {
@@ -244,7 +248,7 @@ def report_excel(data):
                 }
             ],
             'style': {
-                'style_align_center': {'align': 'center', 'valign': 'top'},
+                'style_align_center': {'align': 'center', 'valign': 'top','border' : 1},
                 'style_border': {'font_size': 9, 'border': 1, 'text_wrap' : True},
                 'style_number': {'font_size': 9, 'border': 1, 'text_wrap' : True, 'num_format': '#,##0.00'},
                 'style_approve': {'font_size': 9, 'border': 1,'text_wrap' : True, 'fg_color' : '#00ff00'},
@@ -255,6 +259,7 @@ def report_excel(data):
                 'style_number_pending': {'font_size': 9, 'num_format': '#,##0.00', 'border': 1,'text_wrap' : True, 'fg_color' : '#ffff00'}
             },
             'style_format': {
+                'number' : 'style_align_center',
                 'number_of_claims': 'style_border',
                 'amount_of_claim': 'style_number',
                 'approved_claims': 'style_approve',
@@ -289,6 +294,7 @@ def report_excel(data):
             'header' : 'รายงานการวิเคราะห์สาเหตุการเรียกร้อง (Claims Cause Analysis Report)',
             'select_date' : 'ข้อมูลระหว่างวันที่ 01/07/2567 - 20/07/2567',
             'output_header': [
+                {'title': 'number', 'variable': ' '},
                 {'title': 'claim_cause', 'variable': 'Claim Cause'},
                 {'title': 'number_of_claims', 'variable': 'Number of \nClaims'},
                 {'title': 'percentage_total', 'variable': 'Percentage of \nTotal Claims (%)'},
@@ -298,15 +304,17 @@ def report_excel(data):
             ],
             'header_style' : [
                 {
-                    'column' : ['claim_cause','number_of_claims','percentage_total','percentage_died','percentage_permanent','percentage_temporary'], 
+                    'column' : ['number','claim_cause','number_of_claims','percentage_total','percentage_died','percentage_permanent','percentage_temporary'], 
                     'style' : {'align': 'center', 'valign': 'top', 'border': 1, 'font_size': 9, 'bold' : 1,'text_wrap' : False}
                 }
             ],
             'style': {
                 'style_align_center': {'align': 'left', 'valign': 'top','border' : 1,'font_size': 9},
-                'style_percentage': { 'align': 'right','border' : 1,'font_size': 9}
+                'style_percentage': { 'align': 'right','border' : 1,'font_size': 9},
+                'style_index': { 'align': 'center','valign' : 'top' ,'border' : 1,'font_size': 9}
             },
             'style_format': {
+                'number' : 'style_index',
                 'claim_cause' : 'style_align_center',
                 'number_of_claims' : 'style_percentage',
                 'percentage_total' : 'style_percentage',
@@ -340,13 +348,6 @@ def start_function(functions_to_call, pd_dataframe):
                 pd_dataframe = func(pd_dataframe)
 
     return pd_dataframe
-
-def zip_xlsx(file_name):
-    current_dateTime = datetime.now()
-    timestamp = convert_time(str(current_dateTime))
-    zip_name = f'file/export_RPCL_{timestamp}.zip'
-    with zipfile.ZipFile(zip_name, 'a') as zipf:
-        zipf.write(file_name)
 
 def get_customer_report(chunk, language = 'th'):
     data_transaction = []
@@ -387,8 +388,10 @@ def get_customer_report(chunk, language = 'th'):
 
 def get_insurance_company_report(chunk):
     data_transaction = []
+    number = 1
     for company, data in chunk:
         input_data = {
+            'number' : number,
             'insurance_company': company,
             'number_of_claims': data['total_claims'],
             'amount_of_claim': data['amount_types']['sum'],
@@ -405,13 +408,16 @@ def get_insurance_company_report(chunk):
             'pending_permanent_disability': data['amount_types']['pending_claims']['permanent_disability'],
             'pending_temporary_disability': data['amount_types']['pending_claims']['temporary_disability']
         }
+        number += 1
         data_transaction.append(input_data)
     return data_transaction
 
 def get_claims_cause_analysis_report(chunk):
     data_transaction = []
+    number = 1
     for claim_cause, data in chunk:
         input_data = {
+            'number' : number,
             'claim_cause': claim_cause,
             'number_of_claims': data['sum'],
             'percentage_total': data['percentage_of_total'],
@@ -419,7 +425,7 @@ def get_claims_cause_analysis_report(chunk):
             'percentage_permanent' : data['types']['permanent_disability']['percentage'],
             'percentage_temporary' : data['types']['temporary_disability']['percentage']
         }
-
+        number += 1
         data_transaction.append(input_data)
     return data_transaction
 
@@ -546,6 +552,17 @@ def split_data(data, chunk_size, group= False):
         result = [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
         return result
 
+def create_password_protected_zip(files):
+    current_dateTime = datetime.now()
+    timestamp = convert_time(str(current_dateTime))
+    zip_name = f'file/export_RPCL_{timestamp}.zip'
+    password = f'export_RPCL_{timestamp}'
+    with pyzipper.AESZipFile(zip_name, 'w', compression=pyzipper.ZIP_DEFLATED,
+                             encryption=pyzipper.WZ_AES) as zf:
+        zf.setpassword(password.encode('utf-8'))
+        for file in files:
+            zf.write(file)
+
 def gen_excel(template_input):
     user_name = template_input['user_name']
     chunk_size = template_input['data_per_page']
@@ -618,30 +635,42 @@ def gen_excel(template_input):
             # add footer
             set_paper(sheet_name, writer, user_name, len(chunks))
             worksheet = writer.sheets[sheet_name]
-            if template_input['table'] == 'sales_premium_transaction':
+            if template_input['table'] == 'sales_premium_transaction' or 'claims_cause_analysis_report':
                 worksheet.set_portrait()
-                worksheet.center_horizontally()
-            elif template_input['table'] == 'insurance_company_report':
-                worksheet.set_landscape()
                 worksheet.center_horizontally()
                 worksheet.set_margins(left=0.25, right=0.25)
-            elif template_input['table'] == 'claims_cause_analysis_report':
-                worksheet.set_portrait()
+            elif template_input['table'] == 'insurance_company_report':
+                worksheet.set_landscape()
                 worksheet.center_horizontally()
                 worksheet.set_margins(left=0.25, right=0.25)
 
             worksheet.set_paper(9)
             for col_num, column in enumerate(pd_dataframe.columns):
-                worksheet.set_column(col_num, col_num, template_input['set_column'])
+                if column != 'number':
+                    worksheet.set_column(col_num, col_num, template_input['set_column'])
+                else:
+                    worksheet.set_column(col_num, col_num, 5)
 
-        writer.close()
+    array_holder.add_value(f'{file_name}')
 
-    zip_xlsx(file_name)
+@dataclass
+class ArrayHolder:
+    values: List[int] = field(default_factory=list)
+
+    def add_value(self, value: int):
+        """Add a new value to the array."""
+        self.values.append(value)
+
+    def __repr__(self):
+        return f"ArrayHolder(values={self.values})"
+
+array_holder = ArrayHolder()
 
 def main():
     report_excel(data = 'RPCL001')
     report_excel(data = 'RPCL002')
     report_excel(data = 'RPCL003')
+    create_password_protected_zip(array_holder.values)
 
 if __name__ == "__main__":
     main()
