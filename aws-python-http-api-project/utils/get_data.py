@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 
+
 def object_RPCL003(items):
     claims_cause_analysis_report = {}
     
@@ -95,13 +96,13 @@ def get_claims_cause_analysis_report(chunk):
     number = 1
     for claim_cause, data in chunk:
         input_data = {
-            'number' : number,
+            'number': number,
             'claim_cause': claim_cause,
             'number_of_claims': data['sum'],
             'percentage_total': data['percentage_of_total'],
-            'percentage_died' : data['types']['died']['percentage'],
-            'percentage_permanent' : data['types']['permanent_disability']['percentage'],
-            'percentage_temporary' : data['types']['temporary_disability']['percentage']
+            'percentage_died': data['types']['died']['percentage'],
+            'percentage_permanent': data['types']['permanent_disability']['percentage'],
+            'percentage_temporary': data['types']['temporary_disability']['percentage']
         }
         number += 1
         data_transaction.append(input_data)

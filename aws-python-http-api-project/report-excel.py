@@ -1,29 +1,30 @@
 import pandas as pd
 import boto3
 import json
-from datetime import datetime
-from dataclasses import dataclass, field
-from collections import defaultdict
 import pyzipper
+from datetime import datetime
+from collections import defaultdict
 from utils.helpers import ArrayHolder, SheetHolder
 from utils.get_data import *
-from typing import List, Dict
+import jpype
+jpype.startJVM()
+from asposecells.api import *
 
 config = {
     "dynamodb_endpoint": "http://localhost:8000",
 }
 dynamodb = boto3.resource('dynamodb', endpoint_url=config['dynamodb_endpoint'])
 
-def set_paper(sheet_name: str, writer: pd.ExcelWriter, user_name, chunks):
+def set_paper(sheet_name: str, writer: pd.ExcelWriter, user_name: str, len_template: int):
     worksheet = writer.sheets[sheet_name]
     now = datetime.now()
     thai_year = now.year + 543
     thai_date = now.strftime(f'%d/%m/{thai_year}')
     footer_left = f'&L Users : {user_name}'
     footer_right = f'&R Create At : {thai_date}'
-    footer_center = f'&C หน้าที่ &P / {chunks}'
-
-    worksheet.set_footer(footer_left + '    ' + footer_center + '    ' + footer_right)
+    footer_center = f'&C หน้าที่ &P / &N'
+    worksheet.set_footer(footer_left + footer_center + footer_right)
+    worksheet.freeze_panes(len_template+2, 0)
 
 def export_xlsx(dataframe: pd.DataFrame, writer: pd.ExcelWriter, sheet_name: str, xlsx_index: bool = False):
     if len(dataframe.index) != 0:
@@ -141,13 +142,12 @@ def add_header(pd_dataframe, header):
     return concatenated_df
 
 def report_excel(data): 
-    # data = json.loads(event['body'])
     if data == 'RPCL001':
         filter = ['insurance', 'product', None]
         for i in filter:
             template_input = {
                 'file_name' : 'RPCL001',
-                'data_per_page' : 20,
+                'data_per_page' : 1000,
                 'filter' : i,
                 'language' : 'th',
                 'table' : 'sales_premium_transaction',
@@ -367,6 +367,17 @@ def group_export(data, filter, language='th'):
         result = [group for i, group in enumerate(grouped.values())]
         return result
 
+def convert_pdf(file_name):
+    workbook = Workbook(file_name)
+    for sheet in workbook.getWorksheets():
+        page_setup = sheet.getPageSetup()
+        page_setup.setLeftMargin(0.5)
+        page_setup.setRightMargin(0.5)
+
+    pdf_file = file_name.replace('.xlsx', '.pdf')
+    workbook.save(pdf_file, SaveFormat.PDF)
+    array_holder.add_value(f'{pdf_file}')
+
 def split_data(data, chunk_size, group=False):
     if group:   
         flattened_list = []
@@ -391,25 +402,25 @@ def create_password_protected_zip(files):
             zf.write(file)
 
 def set_sheet_name(data_transaction, filter_type):
-    def get_unique_name(name):
-        count = name_holder.get_count(name)
-        if count > 0:
-            unique_name = f"{name}_{count + 1}"
-        else:
-            unique_name = f"{name}_1"
-        name_holder.add_value(name)
-        return unique_name
+    # def get_unique_name(name):
+    #     count = name_holder.get_count(name)
+    #     if count > 0:
+    #         unique_name = f"{name}_{count + 1}"
+    #     else:
+    #         unique_name = f"{name}"
+    #     name_holder.add_value(name)
+    #     return unique_name
 
     if filter_type == 'insurance':
         for item in data_transaction:
             insurance_company = item.get("insurance_company", '')
-            unique_name = get_unique_name(insurance_company)
-            return unique_name
+            # unique_name = get_unique_name(insurance_company)
+            return insurance_company
     elif filter_type == 'product':
         for item in data_transaction:
             loan_id = item.get("loan_id", '')
-            unique_name = get_unique_name(loan_id)
-            return unique_name
+            # unique_name = get_unique_name(loan_id)
+            return loan_id
 
 def gen_excel(template_input):
     user_name = template_input['user_name']
@@ -447,9 +458,11 @@ def gen_excel(template_input):
 
     if group and template_input['table'] == 'sales_premium_transaction':
         data = group_export(data, filter, language)
-        chunks = split_data(data, chunk_size, group)
+        # chunks = split_data(data, chunk_size, group)
+        chunks = data
     else:
-        chunks = split_data(data, chunk_size)
+        # chunks = split_data(data, chunk_size)
+        chunks = [data]
 
     with pd.ExcelWriter(file_name, engine='xlsxwriter') as writer:
         for i, chunk in enumerate(chunks):
@@ -485,9 +498,9 @@ def gen_excel(template_input):
             add_style(pd_dataframe, style, writer, len_template, custom_header, header_style, header_titles, file, sheet_name=sheet_name)
 
             # add footer
-            set_paper(sheet_name, writer, user_name, len(chunks))
+            set_paper(sheet_name, writer, user_name, len_template)
             worksheet = writer.sheets[sheet_name]
-            if template_input['table'] == 'sales_premium_transaction' or 'claims_cause_analysis_report':
+            if template_input['table'] == 'sales_premium_transaction' or template_input['table'] == 'claims_cause_analysis_report':
                 worksheet.set_portrait()
                 worksheet.center_horizontally()
                 worksheet.set_margins(left=0.25, right=0.25)
@@ -502,7 +515,7 @@ def gen_excel(template_input):
                     worksheet.set_column(col_num, col_num, template_input['set_column'])
                 else:
                     worksheet.set_column(col_num, col_num, 5)
-
+    # convert_pdf(file_name)
     array_holder.add_value(f'{file_name}')
 
 array_holder = ArrayHolder()
@@ -510,8 +523,11 @@ name_holder = SheetHolder()
 
 def main():
     report_excel(data = 'RPCL001')
+    print('001')
     report_excel(data = 'RPCL002')
+    print('002')
     report_excel(data = 'RPCL003')
+    print('003')
     create_password_protected_zip(array_holder.values)
 
 if __name__ == "__main__":
