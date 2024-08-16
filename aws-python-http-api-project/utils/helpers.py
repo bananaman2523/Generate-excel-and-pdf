@@ -7,8 +7,13 @@ class ArrayHolder:
     def add_value(self, value: int):
         self.values.append(value)
 
+    def clear_array(self):
+        self.values.clear()
+
     def __repr__(self):
         return f"ArrayHolder(values={self.values})"
+
+
     
 @dataclass
 class SheetHolder:

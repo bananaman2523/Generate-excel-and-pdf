@@ -3,17 +3,24 @@ import boto3
 import json
 import pyzipper
 from datetime import datetime
-from collections import defaultdict
+from collections import defaultdict, Counter
 from utils.helpers import ArrayHolder, SheetHolder
 from utils.get_data import *
 import jpype
 jpype.startJVM()
 from asposecells.api import *
+import xlsxwriter
+import calendar
 
 config = {
     "dynamodb_endpoint": "http://localhost:8000",
 }
 dynamodb = boto3.resource('dynamodb', endpoint_url=config['dynamodb_endpoint'])
+
+array_holder = ArrayHolder()
+name_holder = SheetHolder()
+holder_categories = ArrayHolder()
+values_categories = ArrayHolder()
 
 def set_paper(sheet_name: str, writer: pd.ExcelWriter, user_name: str, len_template: int):
     worksheet = writer.sheets[sheet_name]
@@ -28,6 +35,8 @@ def set_paper(sheet_name: str, writer: pd.ExcelWriter, user_name: str, len_templ
 
 def export_xlsx(dataframe: pd.DataFrame, writer: pd.ExcelWriter, sheet_name: str, xlsx_index: bool = False):
     if len(dataframe.index) != 0:
+        dataframe.to_excel(writer, sheet_name=sheet_name, index=xlsx_index)
+    else:
         dataframe.to_excel(writer, sheet_name=sheet_name, index=xlsx_index)
 
 def add_style(dataframe: pd.DataFrame, styles: dict, writer: pd.ExcelWriter, len_template, custom_header, header_style, header_titles, file, sheet_name: str):
@@ -58,8 +67,9 @@ def add_style(dataframe: pd.DataFrame, styles: dict, writer: pd.ExcelWriter, len
                             payout_amount = dataframe.get('payout_amount')
 
                             if claim_amount is not None and payout_amount is not None:
-                                if dataframe.at[row_num-1, 'claim_amount'] != dataframe.at[row_num-1, 'payout_amount'] and dataframe.at[row_num-1, 'payout_amount'] != 0:
-                                    red_font_style = workbook.add_format({'font_color': 'red','font_size': 9, 'num_format': '#,##0.00', 'border': 1,'text_wrap' : True, 'valign': 'top'})
+                                if ('(' in str(dataframe.at[row_num-1, 'payout_amount'])) and dataframe.at[row_num-1, 'payout_amount'] != 0:
+                                # if dataframe.at[row_num-1, 'claim_amount'] != dataframe.at[row_num-1, 'payout_amount'] and dataframe.at[row_num-1, 'payout_amount'] != 0:
+                                    red_font_style = workbook.add_format({'font_color': 'red','font_size': 9, 'num_format': '#,##0.00', 'border': 1,'text_wrap' : True, 'valign': 'top', 'align': 'right'})
                                     worksheet.write(row_num, dataframe.columns.get_loc('payout_amount'), dataframe.at[row_num-1, 'payout_amount'], red_font_style)
 
         add_style_column(worksheet, header_style, header_titles, writer, dataframe)
@@ -173,7 +183,7 @@ def report_excel(data):
                 'style': {
                     'style_align_right': {'align': 'right', 'border': 1, 'font_size': 9,'text_wrap' : True, 'valign' : 'top'},
                     'style_border': {'font_size': 9, 'border': 1,'text_wrap' : True, 'valign' : 'top'},
-                    'style_number': {'font_size': 9, 'num_format': '#,##0.00', 'border': 1,'text_wrap' : True, 'valign' : 'top'},
+                    'style_number': {'font_size': 9, 'num_format': '#,##0.00', 'border': 1,'text_wrap' : True, 'valign' : 'top', 'align' : 'right'},
                     'style_index': {'font_size': 10, 'border': 1, 'valign' : 'top', 'align' : 'center'},
                     'center_header' : {'font_size': 15, 'bold' : 1, 'align' : 'center', 'valign' : 'top'}
                 },
@@ -199,7 +209,7 @@ def report_excel(data):
     elif data == 'RPCL002':
         template_input = {
             'file_name' : 'RPCL002',
-            'data_per_page' : 20,
+            'data_per_page' : 1000,
             'table' : 'insurance_company_report',
             'user_name' : 'test test',
             'header' : 'รายงานการเรียกร้องตามบริษัทประกันภัย (Claims by Insurance Company Report)',
@@ -281,7 +291,7 @@ def report_excel(data):
     elif data == 'RPCL003':
         template_input = {
             'file_name' : 'RPCL003',
-            'data_per_page' : 20,
+            'data_per_page' : 1000,
             'set_column' : 17,
             'table' : 'claims_cause_analysis_report',
             'user_name' : 'test test',
@@ -367,17 +377,6 @@ def group_export(data, filter, language='th'):
         result = [group for i, group in enumerate(grouped.values())]
         return result
 
-def convert_pdf(file_name):
-    workbook = Workbook(file_name)
-    for sheet in workbook.getWorksheets():
-        page_setup = sheet.getPageSetup()
-        page_setup.setLeftMargin(0.5)
-        page_setup.setRightMargin(0.5)
-
-    pdf_file = file_name.replace('.xlsx', '.pdf')
-    workbook.save(pdf_file, SaveFormat.PDF)
-    array_holder.add_value(f'{pdf_file}')
-
 def split_data(data, chunk_size, group=False):
     if group:   
         flattened_list = []
@@ -422,9 +421,158 @@ def set_sheet_name(data_transaction, filter_type):
             # unique_name = get_unique_name(loan_id)
             return loan_id
 
+# def remove_duplicates(arr):
+    filtered_arr = [item for item in arr if item not in (None, '', 'nan')]
+    return list(dict.fromkeys(filtered_arr))
+
+# def chart_column(columns):
+#     col = []
+#     for name in columns:
+#         name_col = str(name)
+#         col.append(f'{name_col}_categories')
+#         col.append(f'{name_col}_value')
+#     return col
+
+# def create_sheet_for_calculated(writer):
+    df1 = pd.DataFrame()
+    df2 = pd.DataFrame()
+    export_xlsx(df1, writer, sheet_name='calculator')
+    export_xlsx(df2, writer, sheet_name='summary')
+    workbook = writer.book
+    worksheet = writer.sheets['summary']
+
+    workbook.worksheets_objs.insert(0, workbook.worksheets_objs.pop(workbook.worksheets_objs.index(worksheet)))
+
+def count_data(data_frame, col):
+    count = 0
+    for i in data_frame[col]:
+        if pd.notna(i) and i != '':
+            count += 1
+    return count
+
+def set_title(col):
+    if col == 'insurance_company_data':
+        return 'เปอร์เซ็นต์รวมบริษัทประกันภัย'
+    elif col == 'loan_id_data':
+        return 'เปอร์เซ็นต์รวมผลิตภัณฑ์'
+    elif col == 'claim_status_data':
+        return 'เปอร์เซ็นต์รวม clamim status'
+    elif col == 'month':
+        return 'สรุปเดือนที่มีการ approve'
+    elif col == 'categories_approve':
+        return 'เปอร์เซ็นต์การชำระเงิน'
+
+def insert_chart(file_name, writer, pd_dataframe, data_frame):
+    if file_name in ['RPCL001.xlsx', 'RPCL001_insurance.xlsx', 'RPCL001_product.xlsx']:
+        df1 = pd.DataFrame()
+        export_xlsx(df1, writer, sheet_name='summary')
+        select_column = data_frame.columns.tolist()
+        for i in range(len(pd_dataframe.columns)-1):
+            select_column.pop(0)
+
+        df2 = pd.DataFrame(columns=data_frame.columns)
+
+        workbook = writer.book
+        worksheet = writer.sheets['summary']
+        worksheet_calculator = writer.sheets['calculator']
+        workbook.worksheets_objs.insert(0, workbook.worksheets_objs.pop(workbook.worksheets_objs.index(worksheet)))
+
+        chart_row = 1
+
+        for col in select_column:
+            if col in ['insurance_company_data','loan_id_data','claim_status_data']:
+                title = set_title(col)
+                if col in data_frame.columns:
+                    target_column_index = df2.columns.get_loc(col)
+                    chart = workbook.add_chart({'type': 'doughnut'})
+                    column_length = count_data(data_frame, col)
+                    chart.add_series({
+                        'name': 'Distribution',
+                        'categories': f'=calculator!${chr(65 + target_column_index)}$2:${chr(65 + target_column_index)}${column_length + 1}',
+                        'values': f'=calculator!${chr(65 + target_column_index + 1)}$2:${chr(65 + target_column_index + 1)}${column_length + 1}',
+                        'data_labels': {'percentage': True}
+                    })
+                    chart.set_title({'name': title})
+                    chart.set_chartarea({'border': {'none': True}})
+                    chart.set_hole_size(50)
+
+                    worksheet.insert_chart(f'A{chart_row}', chart, {'x_scale': 1.1, 'y_scale': 1})
+
+                    chart_row += 15
+            elif col in ['month']:
+                title = set_title(col)
+                if col in data_frame.columns:
+                    target_column_index = df2.columns.get_loc(col)
+                    chart = workbook.add_chart({'type': 'line'})
+                    column_length = count_data(data_frame, col)
+                    chart.add_series({
+                        'categories': f'=calculator!${chr(65 + target_column_index)}$2:${chr(65 + target_column_index)}${column_length + 1}',
+                        'values': f'=calculator!${chr(65 + target_column_index + 1)}$2:${chr(65 + target_column_index + 1)}${column_length + 1}'
+                    })
+                    chart.set_title({'name': title})
+                    chart.set_legend({'position': 'none'})
+                    worksheet.insert_chart(f'A{chart_row}', chart, {'width': 400, 'height': 190})
+
+                    chart_row += 15
+            elif col in ['categories_approve']:
+                title = set_title(col)
+                if col in data_frame.columns:
+                    target_column_index = df2.columns.get_loc(col)
+                    chart = workbook.add_chart({'type': 'doughnut'})
+                    column_length = count_data(data_frame, col)
+                    chart.add_series({
+                        'name': 'Distribution',
+                        'categories': f'=calculator!${chr(65 + target_column_index)}$2:${chr(65 + target_column_index)}${column_length + 1}',
+                        'values': f'=calculator!${chr(65 + target_column_index + 1)}$2:${chr(65 + target_column_index + 1)}${column_length + 1}',
+                        'data_labels': {'percentage': True}
+                    })
+                    chart.set_title({'name': title})
+                    chart.set_chartarea({'border': {'none': True}})
+                    chart.set_hole_size(50)
+
+                    worksheet.insert_chart(f'A{chart_row}', chart, {'x_scale': 1.1, 'y_scale': 1})
+
+                    chart_row += 15
+            
+            if col in ['month']:
+                title = 'ผลรวมของการเรียกร้องตามลูกค้าในแต่ละเดือน'
+                if col in data_frame.columns:
+                    target_column_index = df2.columns.get_loc(col)
+                    out_balance_column_index = df2.columns.get_loc('out_balance')
+                    difference_column_index = df2.columns.get_loc('difference')
+                    paid_column_index = df2.columns.get_loc('paid')
+                    chart = workbook.add_chart({'type': 'column'})
+                    column_length = count_data(data_frame, col)
+                    paid_length = count_data(data_frame, 'paid')
+                    difference_length = count_data(data_frame, 'difference')
+                    out_balance_length = count_data(data_frame, 'out_balance')
+                    chart.add_series({
+                        'name': 'ยอดเกินรวม',
+                        'categories': f'=calculator!${chr(65 + target_column_index)}$2:${chr(65 + target_column_index)}${column_length  + 1}',
+                        'values': f'=calculator!${chr(65 + difference_column_index)}$2:${chr(65 + difference_column_index)}${difference_length + 1}'
+                    })
+                    chart.add_series({
+                        'name': 'จำนวนเงินทั้งหมด',
+                        'categories': f'=calculator!${chr(65 + target_column_index)}$2:${chr(65 + target_column_index)}${column_length + 1}',
+                        'values': f'=calculator!${chr(65 + paid_column_index)}$2:${chr(65 + paid_column_index)}${paid_length+ 1}'
+                    })
+                    chart.add_series({
+                        'name': 'ยอดค้างชำระ',
+                        'categories': f'=calculator!${chr(65 + target_column_index)}$2:${chr(65 + target_column_index)}${column_length + 1}',
+                        'values': f'=calculator!${chr(65 + out_balance_column_index)}$2:${chr(65 + out_balance_column_index)}${out_balance_length+ 1}'
+                    })
+                    chart.set_title({'name': title})
+                    chart.set_legend({'position': 'bottom'})
+                    worksheet.insert_chart(f'A{chart_row}', chart, {'width': 400, 'height': 190})
+
+                    chart_row += 15
+
+        worksheet.center_horizontally()
+        worksheet.set_h_pagebreaks([30])
+        worksheet_calculator.hide()
+
 def gen_excel(template_input):
     user_name = template_input['user_name']
-    chunk_size = template_input['data_per_page']
 
     filter_type = template_input.get('filter')
     file_name = template_input.get('file_name', '')
@@ -455,16 +603,21 @@ def gen_excel(template_input):
         data = object_RPCL003(items)
     else:
         data = items
-
     if group and template_input['table'] == 'sales_premium_transaction':
+        report_data = [data]
         data = group_export(data, filter, language)
         # chunks = split_data(data, chunk_size, group)
         chunks = data
     else:
         # chunks = split_data(data, chunk_size)
         chunks = [data]
+        report_data = [data]
 
     with pd.ExcelWriter(file_name, engine='xlsxwriter') as writer:
+        if template_input['table'] == 'sales_premium_transaction':
+            data_chunks = get_customer_report_data(report_data[0], language)
+            data_frame = pd.DataFrame(data_chunks)
+            export_xlsx(data_frame, writer, sheet_name='calculator')
         for i, chunk in enumerate(chunks):
             if template_input['table'] == 'sales_premium_transaction':
                 data_transaction = get_customer_report(chunk, language)
@@ -496,7 +649,6 @@ def gen_excel(template_input):
             header_style = template_input['header_style']
             file = template_input['file_name']
             add_style(pd_dataframe, style, writer, len_template, custom_header, header_style, header_titles, file, sheet_name=sheet_name)
-
             # add footer
             set_paper(sheet_name, writer, user_name, len_template)
             worksheet = writer.sheets[sheet_name]
@@ -515,19 +667,15 @@ def gen_excel(template_input):
                     worksheet.set_column(col_num, col_num, template_input['set_column'])
                 else:
                     worksheet.set_column(col_num, col_num, 5)
-    # convert_pdf(file_name)
-    array_holder.add_value(f'{file_name}')
 
-array_holder = ArrayHolder()
-name_holder = SheetHolder()
+            if template_input['table'] == 'sales_premium_transaction':
+                insert_chart(file_name, writer, pd_dataframe, data_frame)
+    array_holder.add_value(f'{file_name}')
 
 def main():
     report_excel(data = 'RPCL001')
-    print('001')
     report_excel(data = 'RPCL002')
-    print('002')
     report_excel(data = 'RPCL003')
-    print('003')
     create_password_protected_zip(array_holder.values)
 
 if __name__ == "__main__":
