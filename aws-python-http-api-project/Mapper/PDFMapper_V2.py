@@ -77,26 +77,6 @@ def create_pdf_with_data(form_fields, data_fields, pdf_path, output_path, font_p
     doc.save(output_path) # บันทึกไฟล์ PDF ที่สร้างใหม่
     doc.close() # ปิดไฟล์ PDF
 
-def change_field_name(pdf_path, old_name, new_name, output_path):
-    pdf_document = fitz.open(pdf_path)
-
-    for page_num in range(len(pdf_document)):
-        page = pdf_document.load_page(page_num)
-        fields = page.widgets()
-
-        if fields:
-            for field in fields:
-                if field.field_name == old_name:
-                    field.field_name = new_name
-                    print(f"Field name changed from {old_name} to {new_name} on page {page_num + 1}")
-
-    if pdf_path == output_path:
-        pdf_document.saveIncr()
-    else:
-        pdf_document.save(output_path)
-
-    pdf_document.close()
-
 # [3] ลบ field ออกจาก template pdf
 def remove_fields_from_pdf(input_pdf, output_pdf):
     pdf_document = fitz.open(input_pdf)
