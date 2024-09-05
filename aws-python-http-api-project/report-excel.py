@@ -19,16 +19,19 @@ dynamodb = boto3.resource('dynamodb', endpoint_url=config['dynamodb_endpoint'])
 file_holder = ArrayHolder()
 
 def create_folder():
+    """สร้าง folder เพื่อจัดเก็บไฟล์ PDF และ Excel ที่สร้าง"""
     folder_path = './pdf_xlsx'
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
 
 def delete_folder():
+    """ลบ folder ที่เก็บไฟล์ PDF และ Excel"""
     folder_path = './pdf_xlsx'
     if os.path.exists(folder_path):
         shutil.rmtree(folder_path)
 
 def create_password_protected_zip(folder_path, zip_file_path, password):
+    """สร้างไฟล์ ZIP และ set รหัสผ่าน"""
     if not os.path.isdir(folder_path):
         raise FileNotFoundError(f"The folder {folder_path} does not exist")
 
@@ -44,6 +47,7 @@ def create_password_protected_zip(folder_path, zip_file_path, password):
     print(f"Folder '{folder_path}' has been zipped into '{zip_file_path}' with a password")
 
 def scan_data(file_name):
+    """สแกนข้อมูลจาก DynamoDB ตามชื่อไฟล์และช่วงวันที่ที่ระบุ"""
     if file_name == 'RPCL001':
         table = dynamodb.Table('sales_premium_transaction')
 
@@ -79,6 +83,7 @@ def scan_data(file_name):
         return data
 
 def select_mode():
+    """แจ้งให้ผู้ใช้เลือกไฟล์และประเภทการส่งออก และประมวลผลข้อมูลตามนั้น"""
     create_folder()
     file = ['RPCL001', 'RPCL002', 'RPCL003']
     print('Export File : \nRPCL001\nRPCL002\nRPCL003')

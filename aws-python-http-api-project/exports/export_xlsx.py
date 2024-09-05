@@ -1,8 +1,6 @@
 import pandas as pd
 import boto3
-from boto3.dynamodb.conditions import Attr
 import json
-import pyzipper
 from datetime import datetime
 from collections import defaultdict, Counter
 from utils.helpers import ArrayHolder, SheetHolder
@@ -12,28 +10,13 @@ import base64
 import jpype
 jpype.startJVM()
 from asposecells.api import *
-import sys
-
-import os
-from fpdf import FPDF
-from fpdf.fonts import FontFace
 
 config = {
     "dynamodb_endpoint": "http://localhost:8000",
 }
 dynamodb = boto3.resource('dynamodb', endpoint_url=config['dynamodb_endpoint'])
 
-def file_to_base64(file_path):
-    print(file_path)
-    with open(file_path, "rb") as file:
-        encoded_string = base64.b64encode(file.read()).decode('utf-8')
-    return encoded_string
-
-def base64_to_file(base64_string, output_file_path):
-    output_file_path = output_file_path.replace('.xlsx', '.xls')
-    with open(output_file_path, "wb") as file:
-        file.write(base64.b64decode(base64_string))
-
+# ฟังก์ชันสำหรับตั้งค่าเอกสาร Excel (เช่น การเพิ่มหัวกระดาษและการป้อนข้อมูล)
 def set_paper(sheet_name: str, writer: pd.ExcelWriter, user_name: str, len_template: int):
     worksheet = writer.sheets[sheet_name]
     now = datetime.now()
@@ -45,12 +28,7 @@ def set_paper(sheet_name: str, writer: pd.ExcelWriter, user_name: str, len_templ
     worksheet.set_footer(footer_left + footer_center + footer_right)
     worksheet.freeze_panes(len_template+2, 0)
 
-def export_xlsx(dataframe: pd.DataFrame, writer: pd.ExcelWriter, sheet_name: str, xlsx_index: bool = False):
-    if len(dataframe.index) != 0:
-        dataframe.to_excel(writer, sheet_name=sheet_name, index=xlsx_index)
-    else:
-        dataframe.to_excel(writer, sheet_name=sheet_name, index=xlsx_index)
-
+# ฟังก์ชันสำหรับเพิ่มสไตล์ในข้อมูล Excel
 def add_style(dataframe: pd.DataFrame, styles: dict, writer: pd.ExcelWriter, len_template, custom_header, header_style, header_titles, file, sheet_name: str):
     if styles:
         workbook = writer.book
@@ -80,13 +58,13 @@ def add_style(dataframe: pd.DataFrame, styles: dict, writer: pd.ExcelWriter, len
 
                             if claim_amount is not None and payout_amount is not None:
                                 if ('(' in str(dataframe.at[row_num-1, 'payout_amount'])) and dataframe.at[row_num-1, 'payout_amount'] != 0:
-                                # if dataframe.at[row_num-1, 'claim_amount'] != dataframe.at[row_num-1, 'payout_amount'] and dataframe.at[row_num-1, 'payout_amount'] != 0:
                                     red_font_style = workbook.add_format({'font_color': 'red','font_size': 9, 'num_format': '#,##0.00', 'border': 1,'text_wrap' : True, 'valign': 'top', 'align': 'right'})
                                     worksheet.write(row_num, dataframe.columns.get_loc('payout_amount'), dataframe.at[row_num-1, 'payout_amount'], red_font_style)
 
         add_style_column(worksheet, header_style, header_titles, writer, dataframe)
         merge_cells(worksheet, dataframe, len(dataframe.columns), custom_header, writer)
 
+# ฟังก์ชันสำหรับเพิ่มสไตล์ที่ระบุในคอลัมน์
 def add_style_column(worksheet, header_style, header_titles, writer, dataframe):
     workbook = writer.book
     column_style_map = {}
@@ -102,6 +80,7 @@ def add_style_column(worksheet, header_style, header_titles, writer, dataframe):
             if value in header_titles:
                 worksheet.write(row_num, col_num, value, header_format)
 
+# ฟังก์ชันสำหรับรวมเซลล์ที่มีค่าเหมือนกัน   
 def merge_cells(worksheet, dataframe, min_consecutive, custom_header, writer):
     workbook = writer.book
     add_header_values = [item['add_header'] for item in custom_header if isinstance(item, dict) and 'add_header' in item]
@@ -135,6 +114,7 @@ def merge_cells(worksheet, dataframe, min_consecutive, custom_header, writer):
                 
             start_col = end_col + 1
 
+# ฟังก์ชันสำหรับการกำหนดสไตล์
 def custom_style(style, style_format):
     styles_mapping = {}
     for header, style_name in style_format.items():
@@ -142,12 +122,14 @@ def custom_style(style, style_format):
             styles_mapping[header] = style[style_name]
     return styles_mapping
 
+# ฟังก์ชันสำหรับการดึงสไตล์ที่ระบุจากรายการ
 def get_style_in_list(column_name: str, styles: dict):
     style = styles.get(column_name)
     if not style:
         style = styles.get(column_name.split('_last')[0])
     return style
 
+# ฟังก์ชันสำหรับการเพิ่มแถวว่าง
 def add_space(pd_dataframe):
     num_rows = 1
     if num_rows <= 0:
@@ -158,11 +140,13 @@ def add_space(pd_dataframe):
     
     return pd_dataframe_with_space
 
+# ฟังก์ชันสำหรับการเพิ่มหัวข้อ
 def add_header(pd_dataframe, header):
     header_df = pd.DataFrame([[header]* (len(pd_dataframe.columns))], columns=pd_dataframe.columns)
     concatenated_df = pd.concat([header_df, pd_dataframe], ignore_index=True)
     return concatenated_df
 
+# ฟังก์ชันสำหรับการเรียกใช้ฟังก์ชันที่ระบุ
 def start_function(functions_to_call, pd_dataframe):
     function_dict = {
         'add_space' : add_space,
@@ -181,6 +165,7 @@ def start_function(functions_to_call, pd_dataframe):
 
     return pd_dataframe
 
+# ฟังก์ชันสำหรับการจัดกลุ่มข้อมูลตามประเภทที่ระบุ
 def group_export(data, filter, language='th'):
     grouped = defaultdict(list)
     if filter == 'insurance':
@@ -205,6 +190,7 @@ def group_export(data, filter, language='th'):
         result = [group for i, group in enumerate(grouped.values())]
         return result
 
+# ฟังก์ชันหลักสำหรับการเรียกใช้งานการจัดกลุ่มข้อมูล
 def split_data(data, chunk_size, group=False):
     if group:   
         flattened_list = []
@@ -216,19 +202,19 @@ def split_data(data, chunk_size, group=False):
     else:
         result = [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
         return result
-    
+
+# ตั้งชื่อชีทตามประเภทของฟิลเตอร์
 def set_sheet_name(data_transaction, filter_type):
     if filter_type == 'insurance':
         for item in data_transaction:
             insurance_company = item.get("insurance_company", '')
-            # unique_name = get_unique_name(insurance_company)
             return insurance_company
     elif filter_type == 'product':
         for item in data_transaction:
             loan_id = item.get("loan_id", '')
-            # unique_name = get_unique_name(loan_id)
             return loan_id
 
+# นับจำนวนข้อมูลที่ไม่เป็น NaN หรือค่าว่างในคอลัมน์ที่ระบุ
 def count_data(data_frame, col):
     count = 0
     for i in data_frame[col]:
@@ -236,6 +222,7 @@ def count_data(data_frame, col):
             count += 1
     return count
 
+# กำหนดชื่อหัวข้อให้กับคอลัมน์ตามชื่อที่ระบุ
 def set_title(col):
     titles = {
         'insurance_company_data': 'เปอร์เซ็นต์รวมบริษัทประกันภัย',
@@ -246,6 +233,7 @@ def set_title(col):
     }
     return titles.get(col, 'No Title')
 
+# แทรกแผนภูมิลงในไฟล์ Excel
 def insert_chart(file_name, writer, pd_dataframe, data_frame):
     if file_name in ['RPCL001.xlsx', 'RPCL001_insurance.xlsx', 'RPCL001_product.xlsx']:
         export_xlsx(pd.DataFrame(), writer, sheet_name='summary')
@@ -320,6 +308,7 @@ def insert_chart(file_name, writer, pd_dataframe, data_frame):
         worksheet.set_h_pagebreaks([30])
         worksheet_calculator.hide()
 
+# สร้างไฟล์ Excel ตามข้อมูลและเทมเพลตที่กำหนด
 def gen_excel(template_data, template, filter_items = None):
     template_input = template_xlsx(template, filter_items)
     user_name = template_input['user_name']
@@ -395,13 +384,13 @@ def gen_excel(template_data, template, filter_items = None):
             else:
                 sheet_name = f'Sheet_{i+1}'
                 export_xlsx(pd_dataframe, writer, sheet_name=sheet_name)
-            # add style
+            # เพิ่มสไตล์
             len_template = len(template_input['excel_template'])
             custom_header = template_input['excel_template']
             header_style = template_input['header_style']
             file = template_input['file_name']
             add_style(pd_dataframe, style, writer, len_template, custom_header, header_style, header_titles, file, sheet_name=sheet_name)
-            # add footer
+            # เพิ่มฟุตเตอร์
             set_paper(sheet_name, writer, user_name, len_template)
             worksheet = writer.sheets[sheet_name]
             if template_input['table'] == 'sales_premium_transaction' or template_input['table'] == 'claims_cause_analysis_report':
@@ -423,3 +412,24 @@ def gen_excel(template_data, template, filter_items = None):
 
     base64_string = file_to_base64(f'./pdf_xlsx/{file_name}')
     base64_to_file(base64_string, f'./pdf_xlsx/{file_name}')
+
+# ฟังก์ชันสำหรับส่งออกข้อมูลไปยังไฟล์ Excel
+def export_xlsx(dataframe: pd.DataFrame, writer: pd.ExcelWriter, sheet_name: str, xlsx_index: bool = False):
+    if len(dataframe.index) != 0:
+        dataframe.to_excel(writer, sheet_name=sheet_name, index=xlsx_index)
+    else:
+        dataframe.to_excel(writer, sheet_name=sheet_name, index=xlsx_index)
+
+"""แปลงไฟล์ xlsx เป็นไฟล์ xls"""
+# ฟังก์ชันสำหรับแปลงไฟล์เป็น base64
+def file_to_base64(file_path):
+    print(file_path)
+    with open(file_path, "rb") as file:
+        encoded_string = base64.b64encode(file.read()).decode('utf-8')
+    return encoded_string
+
+# ฟังก์ชันสำหรับแปลง base64 กลับเป็นไฟล์
+def base64_to_file(base64_string, output_file_path):
+    output_file_path = output_file_path.replace('.xlsx', '.xls')
+    with open(output_file_path, "wb") as file:
+        file.write(base64.b64decode(base64_string))

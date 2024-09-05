@@ -1,3 +1,4 @@
+# เก็บ template ของ PDF
 def template_pdf(file_name):
     if file_name == 'RPCL001':
         template_input = {
@@ -159,6 +160,7 @@ def template_pdf(file_name):
         }
         return template_input
 
+# เก็บ template ของ xlsx (excel)
 def template_xlsx(file_name, filter_items):
     if file_name == 'RPCL001':
         template_input = {
