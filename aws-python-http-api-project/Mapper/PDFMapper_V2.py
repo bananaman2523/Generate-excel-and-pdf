@@ -21,6 +21,9 @@ def find_form_fields(pdf_path):
                 bottom = field_rect.y1
                 field_type = field.field_type
 
+                width = field_rect.width # ความกว้างขนาดของ field
+                height = field_rect.height # ความยาวขนาดของ field
+
                 # ตรวจสอบประเภทของ fields
                 if field_type == fitz.PDF_WIDGET_TYPE_TEXT:
                     field_type_str = 'TextField'
@@ -36,7 +39,7 @@ def find_form_fields(pdf_path):
                     field_type_str = 'ImageField'
 
                 # เพิ่มฟิลด์ลงในรายการ
-                form_fields.append((page_num, field_name, field_type_str, round(left, 3),round(top, 3),round(right, 3),round(bottom, 3)))
+                form_fields.append((page_num, field_name, field_type_str, round(left, 3),round(top, 3),round(right, 3),round(bottom, 3),round(width, 3),round(height, 3)))
 
     pdf_document.close()
     return form_fields # ส่งคืนข้อมูลฟิลด์
@@ -46,11 +49,12 @@ def create_pdf_with_data(form_fields, data_fields, pdf_path, output_path, font_p
     doc = fitz.open(pdf_path) # เปิดไฟล์ PDF
 
     font_file1 = font_path # กำหนดไฟล์ฟอนต์ที่ต้องการใช้
-
-    for page_num, field_name, field_type_str, left, top, right, bottom in form_fields:
+    ZapfDingbats = '../fonts/ZapfDingbats.ttf'
+    for page_num, field_name, field_type_str, left, top, right, bottom, width, height in form_fields:
         page = doc.load_page(page_num)
         if field_name in data_fields:
             page.insert_font(fontfile=font_file1, fontname="F0")
+            page.insert_font(fontfile=ZapfDingbats, fontname="checkbox")
             value = data_fields[field_name]
             if field_type_str == 'ImageField':
                 rect = fitz.Rect(left, top, right, bottom)
@@ -58,18 +62,59 @@ def create_pdf_with_data(form_fields, data_fields, pdf_path, output_path, font_p
                     rect,
                     filename=value
                 )
+            elif field_type_str == 'Checkbox':
+                # ใช้ insert_htmlbox ในการเขียน data ลงไปใน pdf
+                # rect กำหนดตำแหน่งที่เราจะเขียน data
+                rect = fitz.Rect(left, top, right, bottom)
+                is_checked = value.lower() in ['true', 'checked', '1', 'yes']
+                check = "4" if is_checked else ""
+                html_content = f"""
+                <html>
+                <head>
+                    <style>
+                        @font-face {{
+                            font-family: 'ZapfDingbats';
+                            src: url('../fonts/ZapfDingbats.ttf') format('truetype');
+                        }}
+
+                        body {{
+                            font-family: 'ZapfDingbats', sans-serif;
+                            text-align: center;
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <div class="wrap-word">
+                        {check}
+                    </div>
+                </body>
+                </html>
+                """
+                page.insert_htmlbox(rect, html_content)
             else:
                 # ใช้ insert_htmlbox ในการเขียน data ลงไปใน pdf
+                # rect กำหนดตำแหน่งที่เราจะเขียน data
                 rect = fitz.Rect(left, top, right, bottom)
+                html_content = f"""
+                <html>
+                <head>
+                    <style>
+                        .wrap-word {{
+                            width: {width};
+                            overflow-wrap: break-word;
+
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <div class="wrap-word">
+                        {value}
+                    </div>
+                </body>
+                </html>
+                """
                 # fitz สามารถใช้ css กำหนด style ของแต่ละ field ได้
-                css = "* {text-align:left;vertical-align:text-bottom;font-size:%gpx;}" % (
-                    11,
-                )
-                page.insert_htmlbox(
-                    rect,
-                    value,
-                    css=css
-                )
+                page.insert_htmlbox(rect, html_content)
         else:
             print(f"'{field_name}' : '{field_name}',")  # แจ้งเตือนถ้าไม่มีข้อมูลในฟิลด์
 
