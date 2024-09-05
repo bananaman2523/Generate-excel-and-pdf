@@ -9,26 +9,37 @@ def template_pdf(file_name):
             'cell_widths' : [10, 23, 23, 23, 23, 23, 23, 23, 23],
             'row_height' : 5,
             'columns_styles' : [
-                {'columns': 'ID\n ', 'style': {'font_size': 10 , 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
-                {'columns': 'Customer Name\n ', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
-                {'columns': 'Loan ID\n ', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
-                {'columns': 'Insurance Company', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
-                {'columns': 'Claim Amount\n ', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
-                {'columns': 'Claim Status\n ', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
-                {'columns': 'Submission Date\n ', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
-                {'columns': 'Approval Date\n ', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
-                {'columns': 'Payout Amount\n ', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
+                {'columns': 'id', 'style': {'font_size': 10 , 'bold' : 'B', 'color' : (230, 247, 255), 'bg_color' : (230, 247, 255)}},
+                {'columns': 'customer_name', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
+                {'columns': 'loan_id', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
+                {'columns': 'insurance_company', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
+                {'columns': 'claim_amount', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
+                {'columns': 'claim_status', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
+                {'columns': 'submission_date', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
+                {'columns': 'approval_date', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
+                {'columns': 'payout_amount', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
             ],
+            'header_mapping' : {
+                'id' : 'ID\n ',
+                'customer_name': 'Customer Name\n ',
+                'loan_id': 'Loan ID\n ',
+                'insurance_company': 'Insurance Company',
+                'claim_amount': 'Claim Amount\n ',
+                'claim_status': 'Claim Status\n ',
+                'submission_date': 'Submission Date\n ',
+                'approval_date': 'Approval Date\n ',
+                'payout_amount': 'Payout Amount\n '
+            },
             'rows_styles' : [
-                {'rows': 'ID\n ', 'style': {'font_size': 10, 'align': 'C'}},
-                {'rows': 'Customer Name\n ', 'style': {'font_size': 10}},
-                {'rows': 'Loan ID\n ', 'style': {'font_size': 10}},
-                {'rows': 'Insurance Company', 'style': {'font_size': 10}},
-                {'rows': 'Claim Amount\n ', 'style': {'font_size': 10, 'align': 'R'}},
-                {'rows': 'Claim Status\n ', 'style': {'font_size': 10}},
-                {'rows': 'Submission Date\n ', 'style': {'font_size': 10, 'align': 'R'}},
-                {'rows': 'Approval Date\n ', 'style': {'font_size': 10, 'align': 'R'}},
-                {'rows': 'Payout Amount\n ', 'style': {'font_size': 10, 'align': 'R'}},
+                {'rows': 'id', 'style': {'font_size': 10, 'align': 'C'}},
+                {'rows': 'customer_name', 'style': {'font_size': 10}},
+                {'rows': 'loan_id', 'style': {'font_size': 10}},
+                {'rows': 'insurance_company', 'style': {'font_size': 10}},
+                {'rows': 'claim_amount', 'style': {'font_size': 10, 'align': 'R'}},
+                {'rows': 'claim_status', 'style': {'font_size': 10}},
+                {'rows': 'submission_date', 'style': {'font_size': 10, 'align': 'R'}},
+                {'rows': 'approval_date', 'style': {'font_size': 10, 'align': 'R'}},
+                {'rows': 'payout_amount', 'style': {'font_size': 10, 'align': 'R'}},
             ],
             'header_template': [
                 {'header': 'รายงานการเรียกร้องตามลูกค้า (Claims by Customer Report)', 'style' : {'font_size' : 16}},
@@ -105,7 +116,49 @@ def template_pdf(file_name):
             ]
         }
         return template_input
-    
+    elif file_name == 'RPCL003':
+        template_input = {
+            'file_name' : 'RPCL003',
+            'language' : 'th',
+            'table' : 'sales_premium_transaction',
+            'user_name' : 'test test',
+            'set_column' : 11,
+            'cell_widths' : [10, 30, 30, 30, 30, 30, 30],
+            'row_height' : 5,
+            'columns_styles' : [
+                {'columns': 'id', 'style': {'font_size': 10 , 'bold' : 'B'}},
+                {'columns': 'claim_cause', 'style': {'font_size': 10, 'bold' : 'B'}},
+                {'columns': 'number_of_claims', 'style': {'font_size': 10, 'bold' : 'B'}},
+                {'columns': 'percentage_total', 'style': {'font_size': 10, 'bold' : 'B'}},
+                {'columns': 'percentage_died', 'style': {'font_size': 10, 'bold' : 'B'}},
+                {'columns': 'percentage_permanent', 'style': {'font_size': 10, 'bold' : 'B'}},
+                {'columns': 'percentage_temporary', 'style': {'font_size': 10, 'bold' : 'B'}}
+            ],
+            'header_mapping' : {
+                'id' : 'ID\n ',
+                'claim_cause': 'Claim Cause\n ',
+                'number_of_claims': 'Number of Claims',
+                'percentage_total': 'Percentage of Total Claims (%)',
+                'percentage_died': 'Percentage of Died (%)',
+                'percentage_permanent': 'Percentage of Permanent Disability (%)',
+                'percentage_temporary': 'Percentage of Temporary Disability (%)'
+            },
+            'rows_styles' : [
+                {'rows': 'id', 'style': {'font_size': 10, 'align': 'C'}},
+                {'rows': 'claim_cause', 'style': {'font_size': 10}},
+                {'rows': 'number_of_claims', 'style': {'font_size': 10, 'align': 'R'}},
+                {'rows': 'percentage_total', 'style': {'font_size': 10, 'align': 'R'}},
+                {'rows': 'percentage_died', 'style': {'font_size': 10, 'align': 'R'}},
+                {'rows': 'percentage_permanent', 'style': {'font_size': 10, 'align': 'R'}},
+                {'rows': 'percentage_temporary', 'style': {'font_size': 10, 'align': 'R'}}
+            ],
+            'header_template': [
+                {'header': 'รายงานการเรียกร้องตามบริษัทประกันภัย (Claims by Insurance Company Report)', 'style' : {'font_size' : 16}},
+                {'header': 'ข้อมูลระหว่างวันที่ 01/07/2567 - 20/07/2567', 'style': {'font_size' : 10}}
+            ]
+        }
+        return template_input
+
 def template_xlsx(file_name, filter_items):
     if file_name == 'RPCL001':
         template_input = {

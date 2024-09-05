@@ -8,7 +8,7 @@ from collections import defaultdict, Counter
 from utils.helpers import ArrayHolder, SheetHolder
 from utils.get_data import *
 from exports.template import template_xlsx
-
+import base64
 import jpype
 jpype.startJVM()
 from asposecells.api import *
@@ -23,10 +23,16 @@ config = {
 }
 dynamodb = boto3.resource('dynamodb', endpoint_url=config['dynamodb_endpoint'])
 
-array_holder = ArrayHolder()
-# name_holder = SheetHolder()
-# holder_categories = ArrayHolder()
-# values_categories = ArrayHolder()
+def file_to_base64(file_path):
+    print(file_path)
+    with open(file_path, "rb") as file:
+        encoded_string = base64.b64encode(file.read()).decode('utf-8')
+    return encoded_string
+
+def base64_to_file(base64_string, output_file_path):
+    output_file_path = output_file_path.replace('.xlsx', '.xls')
+    with open(output_file_path, "wb") as file:
+        file.write(base64.b64decode(base64_string))
 
 def set_paper(sheet_name: str, writer: pd.ExcelWriter, user_name: str, len_template: int):
     worksheet = writer.sheets[sheet_name]
@@ -314,7 +320,7 @@ def insert_chart(file_name, writer, pd_dataframe, data_frame):
         worksheet.set_h_pagebreaks([30])
         worksheet_calculator.hide()
 
-def gen_excel(template_data, template, filter_items):
+def gen_excel(template_data, template, filter_items = None):
     template_input = template_xlsx(template, filter_items)
     user_name = template_input['user_name']
 
@@ -360,7 +366,7 @@ def gen_excel(template_data, template, filter_items):
         chunks = [data]
         report_data = [data]
 
-    with pd.ExcelWriter(file_name, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(f'./pdf_xlsx/{file_name}', engine='xlsxwriter') as writer:
         if template_input['table'] == 'sales_premium_transaction':
             data_chunks = get_customer_report_data(report_data[0], language)
             data_frame = pd.DataFrame(data_chunks)
@@ -415,4 +421,5 @@ def gen_excel(template_data, template, filter_items):
             if template_input['table'] == 'sales_premium_transaction' and group == False:
                 insert_chart(file_name, writer, pd_dataframe, data_frame)
 
-    array_holder.add_value(f'{file_name}')
+    base64_string = file_to_base64(f'./pdf_xlsx/{file_name}')
+    base64_to_file(base64_string, f'./pdf_xlsx/{file_name}')

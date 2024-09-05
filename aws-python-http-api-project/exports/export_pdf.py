@@ -103,10 +103,14 @@ def generate_pdf_from_dataframe(dataframe, file_name):
     pdf.add_font('THSarabunNew', 'B', os.path.join(base_fonts_path, 'THSarabunNew Bold.ttf'))
 
     pdf.alias_nb_pages()
-    pdf.add_page(orientation='L')
+    if file_name == 'RPCL002':
+        pdf.add_page(orientation='L')
+    else:
+        pdf.add_page(orientation='P')
+
     TABLE_DATA = TABLE_dataframe(dataframe, template)
-    cell_widths = template['cell_widths']
-    row_height = template['row_height']
+    cell_widths = template.get('cell_widths', [9, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18])
+    row_height = template.get('row_height', 5)
 
     header_styles = [
         {'font': 'THSarabunNew', 'style': 'B', 'size': 10, 'align': 'C'} for _ in cell_widths
@@ -129,15 +133,19 @@ def generate_pdf_from_dataframe(dataframe, file_name):
             col_index = TABLE_DATA[0].index(row_name)
             row_styles[col_index].update(style)
 
+    mapped_headers = []
+    for col_name in TABLE_DATA[0]:
+        mapped_headers.append(template['header_mapping'].get(col_name, col_name))
+
     pdf.set_font("THSarabunNew", 'B', size=10)
-    multi_cell_row(pdf, cell_widths, height=row_height, data=TABLE_DATA[0], styles=header_styles)
+    multi_cell_row(pdf, cell_widths, height=row_height, data=mapped_headers, styles=header_styles)
 
     pdf.set_font("THSarabunNew", size=10)
     for row in TABLE_DATA[1:]:
         if pdf.get_y() + row_height > 270:
             pdf.add_page()
             pdf.set_font("THSarabunNew", 'B', size=10)
-            multi_cell_row(pdf, cell_widths, height=row_height, data=TABLE_DATA[0], styles=header_styles)
+            multi_cell_row(pdf, cell_widths, height=row_height, data=mapped_headers, styles=header_styles)
             pdf.set_font("THSarabunNew", size=10)
         multi_cell_row(pdf, cell_widths, height=row_height, data=row, styles=row_styles)
 
