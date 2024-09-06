@@ -1,101 +1,40 @@
-<!--
-title: 'AWS Simple HTTP Endpoint example in Python'
-description: 'This template demonstrates how to make a simple HTTP API with Python running on AWS Lambda and API Gateway using the Serverless Framework.'
-layout: Doc
-framework: v3
-platform: AWS
-language: python
-authorLink: 'https://github.com/serverless'
-authorName: 'Serverless, inc.'
-authorAvatar: 'https://avatars1.githubusercontent.com/u/13742415?s=200&v=4'
--->
+รายละเอียดการทำงานของโค้ด
+โค้ดนี้มีหน้าที่ในการอ่านและจัดการฟิลด์ต่าง ๆ ที่อยู่ในไฟล์ PDF รวมถึงการสร้างไฟล์ PDF ใหม่ที่มีข้อมูลจาก data_fields มาแทรกลงในฟิลด์ต่าง ๆ ของไฟล์ต้นฉบับ แล้วรวมไฟล์ PDF ที่มีข้อมูลเข้ากับไฟล์เทมเพลตเดิม
 
-# Serverless Framework Python HTTP API on AWS
+ขั้นตอนการทำงาน
+ค้นหาฟิลด์ใน PDF
+ใช้ฟังก์ชัน find_form_fields(pdf_path) เพื่อค้นหาฟิลด์ในไฟล์ PDF โดยใช้ไลบรารี fitz (PyMuPDF) ทำการค้นหาฟิลด์ต่าง ๆ เช่น ช่องกรอกข้อความ, เช็คบ็อกซ์, ปุ่มตัวเลือก และจะระบุตำแหน่ง (พิกัด) และขนาดของแต่ละฟิลด์ลงในรายการ form_fields พร้อมแก้ไขชื่อฟิลด์หากพบชื่อซ้ำกัน
 
-This template demonstrates how to make a simple HTTP API with Python running on AWS Lambda and API Gateway using the Serverless Framework.
+การเปลี่ยนชื่อฟิลด์
+ฟังก์ชัน change_field_name ใช้สำหรับเปลี่ยนชื่อฟิลด์ที่มีชื่อซ้ำกัน เช่นในกรณีที่มีเช็คบ็อกซ์หลายตัวที่ใช้ชื่อเดียวกัน จะเพิ่มเลขต่อท้ายชื่อเช่น field_1, field_2 เพื่อให้สามารถแยกได้
 
-This template does not include any kind of persistence (database). For more advanced examples, check out the [serverless/examples repository](https://github.com/serverless/examples/)  which includes DynamoDB, Mongo, Fauna and other examples.
+สร้างไฟล์ PDF ที่มีข้อมูลแทรกลงในฟิลด์
+ฟังก์ชัน create_pdf_with_data ใช้สร้างไฟล์ PDF ที่นำข้อมูลจาก data_fields ไปแทรกลงในตำแหน่งฟิลด์ที่กำหนดในไฟล์ PDF โดยมีการจัดรูปแบบข้อความ, รูปภาพ และเช็คบ็อกซ์ตามข้อมูลที่ระบุ
 
-## Usage
+การประมวลผลฟิลด์เช็คบ็อกซ์ที่ซ้ำกัน
+ฟังก์ชัน process_data_fields ใช้สำหรับจัดการค่าฟิลด์ที่ซ้ำกัน โดยเฉพาะฟิลด์ที่เป็นเช็คบ็อกซ์ เพื่อให้ฟิลด์หลักและฟิลด์ย่อยที่มี suffix (เช่น _1, _2) ทำงานสัมพันธ์กัน
 
-### Deployment
+การรวม PDF เทมเพลตกับ PDF ข้อมูล
+ฟังก์ชัน merge_pages ใช้สำหรับรวมไฟล์ PDF ที่มีข้อมูลที่แทรกลงในฟิลด์กับไฟล์เทมเพลตต้นฉบับเข้าด้วยกัน โดยหน้าของทั้งสองไฟล์จะถูกซ้อนทับและรวมเป็นไฟล์เดียว
 
-```
-$ serverless deploy
-```
+ฟังก์ชันหลัก (main)
 
-After deploying, you should see output similar to:
-
-```bash
-Deploying aws-python-http-api-project to stage dev (us-east-1)
-
-✔ Service deployed to stack aws-python-http-api-project-dev (140s)
-
-endpoint: GET - https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/
-functions:
-  hello: aws-python-http-api-project-dev-hello (2.3 kB)
-```
-
-_Note_: In current form, after deployment, your API is public and can be invoked by anyone. For production deployments, you might want to configure an authorizer. For details on how to do that, refer to [http event docs](https://www.serverless.com/framework/docs/providers/aws/events/apigateway/).
-
-### Invocation
-
-After successful deployment, you can call the created application via HTTP:
-
-```bash
-curl https://xxxxxxx.execute-api.us-east-1.amazonaws.com/
-```
-
-Which should result in response similar to the following (removed `input` content for brevity):
-
-```json
-{
-  "message": "Go Serverless v3.0! Your function executed successfully!",
-  "input": {
-    ...
-  }
-}
-```
-
-### Local development
-
-You can invoke your function locally by using the following command:
-
-```bash
-serverless invoke local --function hello
-```
-
-Which should result in response similar to the following:
-
-```
-{
-  "statusCode": 200,
-  "body": "{\n  \"message\": \"Go Serverless v3.0! Your function executed successfully!\",\n  \"input\": \"\"\n}"
-}
-```
-
-Alternatively, it is also possible to emulate API Gateway and Lambda locally by using `serverless-offline` plugin. In order to do that, execute the following command:
-
-```bash
-serverless plugin install -n serverless-offline
-```
-
-It will add the `serverless-offline` plugin to `devDependencies` in `package.json` file as well as will add it to `plugins` in `serverless.yml`.
-
-After installation, you can start local emulation with:
-
-```
-serverless offline
-```
-
-To learn more about the capabilities of `serverless-offline`, please refer to its [GitHub repository](https://github.com/dherault/serverless-offline).
-
-### Bundling dependencies
-
-In case you would like to include 3rd party dependencies, you will need to use a plugin called `serverless-python-requirements`. You can set it up by running the following command:
-
-```bash
-serverless plugin install -n serverless-python-requirements
-```
-
-Running the above will automatically add `serverless-python-requirements` to `plugins` section in your `serverless.yml` file and add it as a `devDependency` to `package.json` file. The `package.json` file will be automatically created if it doesn't exist beforehand. Now you will be able to add your dependencies to `requirements.txt` file (`Pipfile` and `pyproject.toml` is also supported but requires additional configuration) and they will be automatically injected to Lambda package during build process. For more details about the plugin's configuration, please refer to [official documentation](https://github.com/UnitedIncome/serverless-python-requirements).
+กำหนดไฟล์ PDF เทมเพลต
+เรียกใช้ฟังก์ชัน find_form_fields เพื่อค้นหาฟิลด์
+เรียกใช้ฟังก์ชัน create_pdf_with_data เพื่อสร้าง PDF ที่มีข้อมูล
+รวม PDF เทมเพลตกับ PDF ข้อมูลโดยใช้ฟังก์ชัน merge_pages
+วิธีการใช้งาน
+เตรียมไฟล์ PDF เทมเพลตที่มีฟิลด์ (ฟิลด์ที่สร้างขึ้นจากโปรแกรม Adobe Acrobat หรือโปรแกรมอื่น ๆ ที่รองรับ)
+กำหนดข้อมูลที่ต้องการแทรกลงในฟิลด์ต่าง ๆ ในตัวแปร data_fields
+รันโปรแกรมโดยเรียกใช้ฟังก์ชัน main() ซึ่งจะสร้างไฟล์ PDF ที่มีข้อมูลและรวมเข้ากับเทมเพลตต้นฉบับ
+ไลบรารีที่ใช้
+fitz (PyMuPDF) สำหรับการจัดการ PDF เช่นการอ่านและแก้ไขฟิลด์
+FPDF สำหรับการสร้างและจัดรูปแบบไฟล์ PDF
+os สำหรับการจัดการไฟล์ในระบบ
+โครงสร้างไฟล์
+pdf_path : เส้นทางของไฟล์ PDF เทมเพลต
+output_path : เส้นทางของไฟล์ PDF ที่สร้างขึ้นมาใหม่
+merged_output_path : เส้นทางของไฟล์ PDF ที่รวมแล้ว
+ข้อควรระวัง
+ฟิลด์ในไฟล์ PDF เทมเพลตควรมีชื่อที่แตกต่างกัน หากมีฟิลด์ชื่อซ้ำกันต้องตรวจสอบการตั้งค่าให้ถูกต้อง
+ควรตรวจสอบข้อมูลใน data_fields ให้ตรงกับฟิลด์ในเทมเพลต
