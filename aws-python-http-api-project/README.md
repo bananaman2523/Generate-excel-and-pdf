@@ -165,3 +165,12 @@ template_input = {
 ## การใช้งาน:
 1.เตรียมไฟล์ PDF ที่มีฟิลด์ (เช่น ฟิลด์กรอกข้อมูล, ฟิลด์เช็คบ็อกซ์, หรือฟิลด์รูปภาพ) โดยฟิลด์เหล่านี้จะถูกค้นหาและใส่ข้อมูลลงไป
 2.กำหนดข้อมูลในตัวแปร data_fields ให้ตรงกับชื่อฟิลด์ในไฟล์ PDF
+
+# Folder fonts
+จะใช้าำหรับเก็บ fonts จะนำไปใช้
+# Folder exports
+เก็บฟังชั่นในการ export file xlsx และ pdf
+# Folder PDF template
+จะใช้เก็บ template pdf ที่จะใช้กับฟังชั่น `PDFMapper` และ `PDFMapper_V2`
+# Folder Mapper
+จะใช้เก็บฟังชั่น Mapper ที่จะทำการสร้างไฟล์ PDF
