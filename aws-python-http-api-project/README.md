@@ -88,6 +88,59 @@ template_input = {
 รองรับการสร้างรายงานที่ปรับแต่งได้ตามเทมเพลตที่กำหนด เช่น การจัดกลุ่มข้อมูลและการปรับสไตล์ของข้อมูล
 ใช้ไลบรารี Aspose Cells เพื่อจัดการกับการแปลงไฟล์ Excel
 หากต้องการทดสอบหรือขยายส่วนใดเพิ่มเติมบอกได้เลยครับ!
+ตัวอย่าง template
+```
+template_input = {
+            'file_name' : 'RPCL001',
+            'data_per_page' : 1000,
+            'filter' : filter_items,
+            'language' : 'th',
+            'table' : 'sales_premium_transaction',
+            'user_name' : 'test test',
+            'set_column' : 11,
+            'output_header': [
+                {'title': 'number', 'variable': ' '},
+                {'title': 'customer_name', 'variable': 'Customer Name'},
+                {'title': 'loan_id', 'variable': 'Loan ID'},
+                {'title': 'insurance_company', 'variable': 'Insurance Company'},
+                {'title': 'claim_amount', 'variable': 'Claim Amount'},
+                {'title': 'claim_status', 'variable': 'Claim Status'},
+                {'title': 'submission_date', 'variable': 'Submission Date'},
+                {'title': 'approval_date', 'variable': 'Approval Date'},
+                {'title': 'payout_amount', 'variable': 'Payout Amount'}
+            ],
+            'header_style' : [
+                {
+                    'column' : ['number','claim_amount','payout_amount','submission_date','approval_date','customer_name','loan_id','insurance_company','claim_status'], 
+                    'style' : {'align': 'center', 'valign': 'top', 'border': 1, 'font_size': 9, 'bold' : 1,'fg_color' :'#E6F7FF','text_wrap' : True}
+                }
+            ],
+            'style': {
+                'style_align_right': {'align': 'right', 'border': 1, 'font_size': 9,'text_wrap' : True, 'valign' : 'top'},
+                'style_border': {'font_size': 9, 'border': 1,'text_wrap' : True, 'valign' : 'top'},
+                'style_number': {'font_size': 9, 'num_format': '#,##0.00', 'border': 1,'text_wrap' : True, 'valign' : 'top', 'align' : 'right'},
+                'style_index': {'font_size': 10, 'border': 1, 'valign' : 'top', 'align' : 'center'},
+                'center_header' : {'font_size': 15, 'bold' : 1, 'align' : 'center', 'valign' : 'top'}
+            },
+            'style_format': {
+                'number': 'style_index',
+                'claim_amount': 'style_number',
+                'payout_amount': 'style_number',
+                'submission_date': 'style_align_right',
+                'approval_date': 'style_align_right',
+                'customer_name': 'style_border',
+                'loan_id': 'style_border',
+                'insurance_company': 'style_border',
+                'claim_status': 'style_border'
+            },
+            'excel_template': [
+                {'add_header': 'รายงานการเรียกร้องตามลูกค้า (Claims by Customer Report)', 'style': {'align' : 'center', 'bold' : '1', 'font_size' : 15}},
+                'add_space',
+                {'add_header': 'ข้อมูลระหว่างวันที่ 01/07/2567 - 20/07/2567', 'style': {'align' : 'center'}},
+                'add_space'
+            ]
+        }
+```
 
 # รายละเอียดการทำงานของโค้ด PDFMapper
 จะเก็บอยู่ใน folder Mapper
