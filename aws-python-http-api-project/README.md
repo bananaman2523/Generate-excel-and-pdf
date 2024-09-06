@@ -14,6 +14,53 @@ file นี้ทำการสร้างไฟล์ PDF จาก DataFrame
    - ฟังก์ชันหลักที่รับ DataFrame และสร้างไฟล์ PDF โดยใช้ฟังก์ชัน `TABLE_dataframe` เพื่อแปลง DataFrame เป็นแถว แล้วแสดงผลใน PDF โดยใช้ฟังก์ชัน `multi_cell_row`
    - ฟังก์ชันนี้ใช้เทมเพลตสำหรับกำหนดความกว้างของเซลล์ ความสูงของแถว และรูปแบบสำหรับส่วนหัวและข้อมูลของแต่ละแถว ทั้งนี้ การกำหนดหน้ากระดาษจะถูกตั้งเป็นแนวตั้งหรือแนวนอนขึ้นอยู่กับค่า `file_name`
 
+ตัวอย่าง template PDF
+`template_input = {
+            'file_name' : 'RPCL001',
+            'language' : 'th',
+            'table' : 'sales_premium_transaction',
+            'user_name' : 'test test',
+            'set_column' : 11,
+            'cell_widths' : [10, 23, 23, 23, 23, 23, 23, 23, 23],
+            'row_height' : 5,
+            'columns_styles' : [
+                {'columns': 'id', 'style': {'font_size': 10 , 'bold' : 'B', 'color' : (230, 247, 255), 'bg_color' : (230, 247, 255)}},
+                {'columns': 'customer_name', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
+                {'columns': 'loan_id', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
+                {'columns': 'insurance_company', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
+                {'columns': 'claim_amount', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
+                {'columns': 'claim_status', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
+                {'columns': 'submission_date', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
+                {'columns': 'approval_date', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
+                {'columns': 'payout_amount', 'style': {'font_size': 10, 'bold' : 'B', 'bg_color' : (230, 247, 255)}},
+            ],
+            'header_mapping' : {
+                'id' : 'ID\n ',
+                'customer_name': 'Customer Name\n ',
+                'loan_id': 'Loan ID\n ',
+                'insurance_company': 'Insurance Company',
+                'claim_amount': 'Claim Amount\n ',
+                'claim_status': 'Claim Status\n ',
+                'submission_date': 'Submission Date\n ',
+                'approval_date': 'Approval Date\n ',
+                'payout_amount': 'Payout Amount\n '
+            },
+            'rows_styles' : [
+                {'rows': 'id', 'style': {'font_size': 10, 'align': 'C'}},
+                {'rows': 'customer_name', 'style': {'font_size': 10}},
+                {'rows': 'loan_id', 'style': {'font_size': 10}},
+                {'rows': 'insurance_company', 'style': {'font_size': 10}},
+                {'rows': 'claim_amount', 'style': {'font_size': 10, 'align': 'R'}},
+                {'rows': 'claim_status', 'style': {'font_size': 10}},
+                {'rows': 'submission_date', 'style': {'font_size': 10, 'align': 'R'}},
+                {'rows': 'approval_date', 'style': {'font_size': 10, 'align': 'R'}},
+                {'rows': 'payout_amount', 'style': {'font_size': 10, 'align': 'R'}},
+            ],
+            'header_template': [
+                {'header': 'รายงานการเรียกร้องตามลูกค้า (Claims by Customer Report)', 'style' : {'font_size' : 16}},
+                {'header': 'ข้อมูลระหว่างวันที่ 01/07/2567 - 20/07/2567', 'style': {'font_size' : 10}}
+            ]
+        }`
 ### คุณสมบัติเด่น:
 - **ฟอนต์ที่กำหนดเอง**: สคริปต์นี้เพิ่มฟอนต์ภาษาไทย (`THSarabunNew`) สำหรับการแสดงข้อความ
 - **เทมเพลตแบบไดนามิก**: กำหนดความกว้างของคอลัมน์ รูปแบบ และการแมปคอลัมน์ได้ผ่านเทมเพลต
