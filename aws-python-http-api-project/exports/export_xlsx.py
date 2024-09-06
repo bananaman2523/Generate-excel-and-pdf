@@ -2,8 +2,7 @@ import pandas as pd
 import boto3
 import json
 from datetime import datetime
-from collections import defaultdict, Counter
-from utils.helpers import ArrayHolder, SheetHolder
+from collections import defaultdict
 from utils.get_data import *
 from exports.template import template_xlsx
 import base64
@@ -214,100 +213,6 @@ def set_sheet_name(data_transaction, filter_type):
             loan_id = item.get("loan_id", '')
             return loan_id
 
-# นับจำนวนข้อมูลที่ไม่เป็น NaN หรือค่าว่างในคอลัมน์ที่ระบุ
-def count_data(data_frame, col):
-    count = 0
-    for i in data_frame[col]:
-        if pd.notna(i) and i != '':
-            count += 1
-    return count
-
-# กำหนดชื่อหัวข้อให้กับคอลัมน์ตามชื่อที่ระบุ
-def set_title(col):
-    titles = {
-        'insurance_company_data': 'เปอร์เซ็นต์รวมบริษัทประกันภัย',
-        'loan_id_data': 'เปอร์เซ็นต์รวมผลิตภัณฑ์',
-        'claim_status_data': 'เปอร์เซ็นต์รวม claim status',
-        'month': 'สรุปเดือนที่มีการ approve',
-        'categories_approve': 'เปอร์เซ็นต์การชำระเงิน'
-    }
-    return titles.get(col, 'No Title')
-
-# แทรกแผนภูมิลงในไฟล์ Excel
-def insert_chart(file_name, writer, pd_dataframe, data_frame):
-    if file_name in ['RPCL001.xlsx', 'RPCL001_insurance.xlsx', 'RPCL001_product.xlsx']:
-        export_xlsx(pd.DataFrame(), writer, sheet_name='summary')
-        select_column = data_frame.columns.tolist()[1:]
-
-        workbook = writer.book
-        worksheet = writer.sheets['summary']
-        worksheet_calculator = writer.sheets['calculator']
-        workbook.worksheets_objs.insert(0, workbook.worksheets_objs.pop(workbook.worksheets_objs.index(worksheet)))
-
-        chart_row = 1
-
-        for col in select_column:
-            if col in ['insurance_company_data', 'loan_id_data', 'claim_status_data', 'categories_approve']:
-                title = set_title(col)
-                target_column_index = data_frame.columns.get_loc(col)
-                chart = workbook.add_chart({'type': 'doughnut'})
-                column_length = count_data(data_frame, col)
-                chart.add_series({
-                    'name': 'Distribution',
-                    'categories': f'=calculator!${chr(65 + target_column_index)}$2:${chr(65 + target_column_index)}${column_length + 1}',
-                    'values': f'=calculator!${chr(65 + target_column_index + 1)}$2:${chr(65 + target_column_index + 1)}${column_length + 1}',
-                    'data_labels': {'percentage': True}
-                })
-                chart.set_title({'name': title})
-                chart.set_chartarea({'border': {'none': True}})
-                chart.set_hole_size(50)
-
-                worksheet.insert_chart(f'A{chart_row}', chart, {'x_scale': 1.1, 'y_scale': 1})
-                chart_row += 15
-
-            elif col == 'month':
-                title = set_title(col)
-                target_column_index = data_frame.columns.get_loc(col)
-                chart = workbook.add_chart({'type': 'line'})
-                column_length = count_data(data_frame, col)
-                chart.add_series({
-                    'categories': f'=calculator!${chr(65 + target_column_index)}$2:${chr(65 + target_column_index)}${column_length + 1}',
-                    'values': f'=calculator!${chr(65 + target_column_index + 1)}$2:${chr(65 + target_column_index + 1)}${column_length + 1}'
-                })
-                chart.set_title({'name': title})
-                chart.set_legend({'position': 'none'})
-                worksheet.insert_chart(f'A{chart_row}', chart, {'width': 400, 'height': 190})
-                chart_row += 15
-
-                title = 'ผลรวมของการเรียกร้องตามลูกค้าในแต่ละเดือน'
-                out_balance_column_index = data_frame.columns.get_loc('out_balance')
-                difference_column_index = data_frame.columns.get_loc('difference')
-                paid_column_index = data_frame.columns.get_loc('paid')
-                chart = workbook.add_chart({'type': 'column'})
-                chart.add_series({
-                    'name': 'ยอดเกินรวม',
-                    'categories': f'=calculator!${chr(65 + target_column_index)}$2:${chr(65 + target_column_index)}${column_length + 1}',
-                    'values': f'=calculator!${chr(65 + difference_column_index)}$2:${chr(65 + difference_column_index)}${column_length + 1}'
-                })
-                chart.add_series({
-                    'name': 'จำนวนเงินทั้งหมด',
-                    'categories': f'=calculator!${chr(65 + target_column_index)}$2:${chr(65 + target_column_index)}${column_length + 1}',
-                    'values': f'=calculator!${chr(65 + paid_column_index)}$2:${chr(65 + paid_column_index)}${column_length + 1}'
-                })
-                chart.add_series({
-                    'name': 'ยอดค้างชำระ',
-                    'categories': f'=calculator!${chr(65 + target_column_index)}$2:${chr(65 + target_column_index)}${column_length + 1}',
-                    'values': f'=calculator!${chr(65 + out_balance_column_index)}$2:${chr(65 + out_balance_column_index)}${column_length + 1}'
-                })
-                chart.set_title({'name': title})
-                chart.set_legend({'position': 'bottom'})
-                worksheet.insert_chart(f'A{chart_row}', chart, {'width': 400, 'height': 190})
-                chart_row += 15
-
-        worksheet.center_horizontally()
-        worksheet.set_h_pagebreaks([30])
-        worksheet_calculator.hide()
-
 # สร้างไฟล์ Excel ตามข้อมูลและเทมเพลตที่กำหนด
 def gen_excel(template_data, template, filter_items = None):
     template_input = template_xlsx(template, filter_items)
@@ -348,18 +253,12 @@ def gen_excel(template_data, template, filter_items = None):
         data = template_data
 
     if group and template_input['table'] == 'sales_premium_transaction':
-        report_data = [data]
         data = group_export(data, filter, language)
         chunks = data
     else:
         chunks = [data]
-        report_data = [data]
 
     with pd.ExcelWriter(f'./pdf_xlsx/{file_name}', engine='xlsxwriter') as writer:
-        if template_input['table'] == 'sales_premium_transaction':
-            data_chunks = get_customer_report_data(report_data[0], language)
-            data_frame = pd.DataFrame(data_chunks)
-            export_xlsx(data_frame, writer, sheet_name='calculator')
         for i, chunk in enumerate(chunks):
             if template_input['table'] == 'sales_premium_transaction':
                 data_transaction = get_customer_report(chunk, language)
@@ -406,9 +305,6 @@ def gen_excel(template_data, template, filter_items = None):
                     worksheet.set_column(col_num, col_num, template_input['set_column'])
                 else:
                     worksheet.set_column(col_num, col_num, 5)
-
-            if template_input['table'] == 'sales_premium_transaction' and group == False:
-                insert_chart(file_name, writer, pd_dataframe, data_frame)
 
     base64_string = file_to_base64(f'./pdf_xlsx/{file_name}')
     base64_to_file(base64_string, f'./pdf_xlsx/{file_name}')
